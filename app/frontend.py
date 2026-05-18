@@ -1,38 +1,49 @@
 import streamlit as st
-import requests
+import pandas as pd
+import joblib
 
-# page configuration
+# ---------------- PAGE CONFIG ---------------- #
+
 st.set_page_config(
     page_title="Inventory Forecasting",
     page_icon="📈",
     layout="wide"
 )
 
-# title
+# ---------------- LOAD MODEL ---------------- #
+
+model = joblib.load(
+    "models/random_forest_model.pkl"
+)
+
+# ---------------- TITLE ---------------- #
+
 st.title("📈 Inventory Demand Forecasting System")
 
-# description
 st.markdown("""
-Forecast weekly sales demand using machine learning
-and temporal forecasting features.
+Forecast weekly retail sales demand using
+machine learning and temporal forecasting features.
 """)
 
 st.divider()
 
-# create columns
+# ---------------- INPUT LAYOUT ---------------- #
+
 col1, col2 = st.columns(2)
 
-# left column
+# ---------- LEFT COLUMN ---------- #
+
 with col1:
 
     store = st.number_input(
         "Store",
+        min_value=1,
         value=1
     )
 
-    holiday_flag = st.number_input(
+    holiday_flag = st.selectbox(
         "Holiday Flag",
-        value=0
+        [0, 1]
     )
 
     temperature = st.number_input(
@@ -55,21 +66,28 @@ with col1:
         value=7.2
     )
 
-# right column
+# ---------- RIGHT COLUMN ---------- #
+
 with col2:
 
     year = st.number_input(
         "Year",
+        min_value=2010,
+        max_value=2030,
         value=2012
     )
 
     month = st.number_input(
         "Month",
+        min_value=1,
+        max_value=12,
         value=5
     )
 
     week = st.number_input(
         "Week",
+        min_value=1,
+        max_value=52,
         value=20
     )
 
@@ -100,11 +118,11 @@ with col2:
 
 st.divider()
 
-# prediction button
+# ---------------- PREDICTION ---------------- #
+
 if st.button("Predict Sales"):
 
-    # input data
-    data = {
+    input_data = {
         "Store": store,
         "Holiday_Flag": holiday_flag,
         "Temperature": temperature,
@@ -121,24 +139,13 @@ if st.button("Predict Sales"):
         "Rolling_Std_4": rolling_std_4
     }
 
-    try:
+    input_df = pd.DataFrame([input_data])
 
-        # send request to FastAPI backend
-        response = requests.post(
-            "http://127.0.0.1:8000/predict",
-            json=data
-        )
+    prediction = model.predict(input_df)[0]
 
-        prediction = response.json()
+    st.success("Prediction Generated Successfully")
 
-        # show prediction
-        st.metric(
-            label="Predicted Weekly Sales",
-            value=f"${prediction['predicted_sales']:,.2f}"
-        )
-
-    except Exception as e:
-
-        st.error(
-            f"Error connecting to backend: {e}"
-        )
+    st.metric(
+        label="Predicted Weekly Sales",
+        value=f"${prediction:,.2f}"
+    )
